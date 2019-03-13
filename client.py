@@ -1,6 +1,11 @@
 import os
 import sys
 import requests
+from io import BytesIO
+
+ACCESS_KEY_ID = os.environ['aws_access_key_id']
+SECRET_ACCESS_KEY = os.environ['aws_secret_access_key']
+BUCKET_NAME = os.environ['bucket_name']
 
 
 def getfile(filename, destination):
@@ -24,6 +29,53 @@ def getfile(filename, destination):
                 else:
                     print("No blocks found. Possibly a corrupt file")
 
+# Read file from S3, return data
+def readS3file(file):
+    s3 = boto3.resource(
+      's3',
+      region_name='us-west-2',
+      aws_access_key_id=ACCESS_KEY_ID,
+      aws_secret_access_key=SECRET_ACCESS_KEY
+    )
+    obj = s3.Object(BUCKET_NAME, file)
+    data = obj.get()['Body'].read()
+    return data
+
+
+# Write data from S3 to file
+def putS3file(args):
+    try: 
+        # Data from S3
+        data = readS3file(filename)
+
+        source = args[1]
+        filename = args[2]
+        filetype = args[3]
+
+        size = len(data)
+        blocks = getBlocks(filename, str(size))
+        blocksize = getBlockSize()
+        print("check block size " + str(blocksize))
+        datanodes = getDataNodes()
+
+        # Write data from S3 into file
+        binary_stream = BytesIO(bytes(data))
+        for b in blocks:
+           datablock = binary_stream.read(blocksize)
+           block_id = b[0]
+           nodes = [datanodes[_] for _ in b[1]]
+           multipart_form_data = {
+              'fileData': datablock,
+              'blockId': block_id
+           }
+           for n in nodes:
+              url = 'http://' + n[0] + ':' + n[1] + '/upload'
+              print(url)
+              response = requests.post(url, json=multipart_form_data)
+              print(response.status_code)
+    except Exception as error:
+        print(error)
+        
 
 def putfile(args):
     try:
