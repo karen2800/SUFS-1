@@ -1,6 +1,8 @@
 import os
 import sys
 import requests
+import boto3
+import configparser
 
 
 def getfile(filename, destination):
@@ -81,6 +83,19 @@ def update_replica():
     if response.status_code != 200:
         raise Exception(response.text)
 
+# Read file from S3, return data
+def readS3file(file):
+    config = configparser.ConfigParser()
+    config.read('testing.cfg')
+    s3 = boto3.resource(
+      's3',
+      region_name='us-west-2',
+      aws_access_key_id=config['default']['aws_access_key_id'],
+      aws_secret_access_key=config['default']['aws_secret_access_key']
+    )
+    obj = s3.Object(config['default']['bucket_name'], file)
+    data = obj.get()['Body'].read()
+    return data
 
 def main(args):
     if args[0] == "getfile":
