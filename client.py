@@ -35,7 +35,7 @@ def getfile(filename, destination):
 def readS3file(file):
     s3 = boto3.resource(
       's3',
-      region_name='us-west-2',
+      #region_name='us-west-2',
       aws_access_key_id=ACCESS_KEY_ID,
       aws_secret_access_key=SECRET_ACCESS_KEY
     )
